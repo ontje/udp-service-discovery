@@ -2,22 +2,22 @@ var util = require('util');
 var dgram = require('dgram');
 var EventEmitter = require('events').EventEmitter;
 
-var _listenFor = null;
-var _listenOnce = false;
-var _localPort;
-var _localAddress;
-
 module.exports = UDPServiceDiscovery;
 
-function UDPServiceDiscovery(opts) {
+function UDPServiceDiscovery (opts) {
 	if (!(this instanceof UDPServiceDiscovery)) {
 		return new UDPServiceDiscovery(opts);
 	}
 
 	opts = opts || {};
-	_localPort = opts.port || 12345;
-	_localAddress = opts.address || null;
 
+	this.localPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
+	this.localAddress = typeof opts.address === 'undefined' ? null : opts.address;
+	this.announceInterval = typeof opts.announceInterval === 'undefined' ? 250 : opts.announceInterval;
+
+	this.serviceListenFor = null;
+	this.serviceListenOnce = false;
+	
 	var self = this;
 
   // Setup UDP socket
@@ -28,18 +28,18 @@ function UDPServiceDiscovery(opts) {
 		var announcedService = JSONObjFromString(data);
 
 		if (announcedService) {
-			if (_listenFor) {
-				if (announcedService.name === _listenFor) {
+			if (self.serviceListenFor) {
+				if (announcedService.name === self.serviceListenFor) {
 					self.emit('discovery', announcedService);
 
-					if (_listenOnce) {
+					if (self.serviceListenOnce) {
 						self.close();
 					}
 				}
 			} else {
 				self.emit('discovery', announcedService);
 
-				if (_listenOnce) {
+				if (self.serviceListenOnce) {
 					self.close();
 				}
 			}
@@ -66,7 +66,7 @@ function UDPServiceDiscovery(opts) {
 	});
 
 	this.socket.on('close', function () {
-		console.log('closing');
+		console.log('closing socket');
 	});
 }
 
@@ -99,7 +99,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 	var announceMessage = new Buffer(JSON.stringify(service));
 
 	function announce() {
-		self.socket.send(announceMessage, 0, announceMessage.length, _localPort, '', function (err, bytes) {
+		self.socket.send(announceMessage, 0, announceMessage.length, self.localPort, '', function (err, bytes) {
 			if (err) {
 				throw err;
 			}
@@ -107,30 +107,30 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 	}
 
     // announce 4 times per seconds
-	setInterval(announce, 250);
+	setInterval(announce, this.announceInterval);
 };
 
 UDPServiceDiscovery.prototype.listen = function listen(serviceName) {
-	_listenOnce = false;
+	this.serviceListenOnce = false;
 	if (serviceName) {
-		_listenFor = serviceName;
+		this.listenFor = serviceName;
 	}
 
 	this.tryBinding();
 };
 
-UDPServiceDiscovery.prototype.listenOnce = function listenOnce(serviceName) {
-	_listenOnce = true;
+UDPServiceDiscovery.prototype.listenOnce = function listenOnce (serviceName) {
+	this.serviceListenOnce = true;
 
 	if (serviceName) {
-		_listenFor = serviceName;
+		this.serviceListenFor = serviceName;
 	}
 
 	this.tryBinding();
 };
 
 UDPServiceDiscovery.prototype.tryBinding = function tryBinding() {
-	this.socket.bind(_localPort, _localAddress);
+	this.socket.bind(this.localPort, this.localAddress);
 };
 
 UDPServiceDiscovery.prototype.close = function close() {
