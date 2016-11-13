@@ -29,12 +29,24 @@ function UDPServiceDiscovery (opts) {
 
 		if (announcedService) {
 			if (self.serviceListenFor) {
-				if (announcedService.name === self.serviceListenFor) {
+				var match = false;
+				
+				Object.keys(self.serviceListenFor).forEach(function(key) {
+    				if (self.serviceListenFor[key] === announcedService[key]) {
+						match = true;
+					} else {
+						match = false;
+					}
+				});
+
+				if (match) {
 					self.emit('discovery', announcedService);
 
 					if (self.serviceListenOnce) {
 						self.close();
 					}
+				} else {
+					// no match
 				}
 			} else {
 				self.emit('discovery', announcedService);
@@ -110,20 +122,38 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 	setInterval(announce, this.announceInterval);
 };
 
-UDPServiceDiscovery.prototype.listen = function listen(serviceName) {
+UDPServiceDiscovery.prototype.listen = function listen(listenFor) {
 	this.serviceListenOnce = false;
-	if (serviceName) {
-		this.listenFor = serviceName;
+
+	if (listenFor) {
+		if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+			this.serviceListenFor = {};
+			this.serviceListenFor.name = listenFor;
+		} else {
+			if (typeof listenFor  === 'string') {
+				this.serviceListenFor = JSONObjFromString(listenFor);
+			} else {
+				this.serviceListenFor = listenFor;
+			}
+		}
 	}
 
 	this.tryBinding();
 };
 
-UDPServiceDiscovery.prototype.listenOnce = function listenOnce (serviceName) {
+UDPServiceDiscovery.prototype.listenOnce = function listenOnce (listenFor) {
 	this.serviceListenOnce = true;
-
-	if (serviceName) {
-		this.serviceListenFor = serviceName;
+	if (listenFor) {
+		if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+			this.serviceListenFor = {};
+			this.serviceListenFor.name = listenFor;
+		} else {
+			if (typeof listenFor  === 'string') {
+				this.serviceListenFor = JSONObjFromString(listenFor);
+			} else {
+				this.serviceListenFor = listenFor;
+			}
+		}
 	}
 
 	this.tryBinding();
