@@ -1,6 +1,7 @@
 var util = require('util');
 var dgram = require('dgram');
 var EventEmitter = require('events').EventEmitter;
+var Netmask = require('netmask').Netmask;
 
 module.exports = UDPServiceDiscovery;
 
@@ -11,8 +12,8 @@ function UDPServiceDiscovery (opts) {
 
 	opts = opts || {};
 
-	this.localPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
-	this.localAddress = typeof opts.address === 'undefined' ? null : opts.address;
+	this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
+	this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
 	this.announceInterval = typeof opts.announceInterval === 'undefined' ? 250 : opts.announceInterval;
 
 	this.serviceListenFor = null;
@@ -105,13 +106,16 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 	}
 
     // fill in IP if null
-	service.host = service.host || getLocalIPs()[0];
-
-	var self = this;
+  	service.host = service.host || getLocalIPAndNetmask()[0][0];
+    this.netmask = getLocalIPAndNetmask()[0][1];
+    this.broadcastAddress = getBroadcastAddress(service.host, this.netmask);
+	
+	console.log(this.broadcastAddress);
 	var announceMessage = new Buffer(JSON.stringify(service));
+	var self = this;
 
 	function announce() {
-		self.socket.send(announceMessage, 0, announceMessage.length, self.localPort, '', function (err, bytes) {
+		self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, self.broadcastAddress, function (err, bytes) {
 			if (err) {
 				throw err;
 			}
@@ -160,7 +164,7 @@ UDPServiceDiscovery.prototype.listenOnce = function listenOnce (listenFor) {
 };
 
 UDPServiceDiscovery.prototype.tryBinding = function tryBinding() {
-	this.socket.bind(this.localPort, this.localAddress);
+	this.socket.bind(this.broadcasterPort, this.broadcasterAddress);
 };
 
 UDPServiceDiscovery.prototype.close = function close() {
@@ -184,17 +188,23 @@ function JSONObjFromString(jsonString) {
 	return null;
 }
 
-function getLocalIPs() {
+function getLocalIPAndNetmask() {
 	var networkInterfaces = require('os').networkInterfaces();
 	var matches = [];
 
 	Object.keys(networkInterfaces).forEach(function (item) {
 		networkInterfaces[item].forEach(function (address) {
 			if (address.internal === false && address.family === 'IPv4') {
-				matches.push(address.address);
+                matches.push([address.address, address.netmask]);
 			}
 		});
 	});
 
 	return matches;
+}
+
+function getBroadcastAddress(ip, netmask) {
+    var block = new Netmask(ip  + "/" +  netmask);
+    
+    return block.broadcast;
 }

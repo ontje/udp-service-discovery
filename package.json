@@ -3,7 +3,9 @@
   "description": "Simple and cheap service discovery broadcast and listener",
   "version": "0.0.4",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "netmask": "^1.0.6"
+  },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
