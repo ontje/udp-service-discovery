@@ -6,205 +6,224 @@ var Netmask = require('netmask').Netmask;
 module.exports = UDPServiceDiscovery;
 
 function UDPServiceDiscovery (opts) {
-	if (!(this instanceof UDPServiceDiscovery)) {
-		return new UDPServiceDiscovery(opts);
-	}
+    if (!(this instanceof UDPServiceDiscovery)) {
+        return new UDPServiceDiscovery(opts);
+    }
 
-	opts = opts || {};
+    opts = opts || {};
 
-	this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
-	this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
-	this.announceInterval = typeof opts.announceInterval === 'undefined' ? 250 : opts.announceInterval;
+    this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
+    this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
+    this.announceInterval = typeof opts.announceInterval === 'undefined' ? 1000 : opts.announceInterval;
 
-	this.serviceListenFor = null;
-	this.serviceListenOnce = false;
-	
-	var self = this;
+    this.serviceListenFor = null;
+    this.serviceListenOnce = false;
 
-  // Setup UDP socket
-	this.socket = dgram.createSocket('udp4');
+    var self = this;
 
-  // Setup message handler
-	this.socket.on('message', function (data) {
-		var announcedService = JSONObjFromString(data);
+    // Setup UDP socket
+    this.socket = dgram.createSocket('udp4');
 
-		if (announcedService) {
-			if (self.serviceListenFor) {
-				var match = false;
-				
-				Object.keys(self.serviceListenFor).forEach(function(key) {
-    				if (self.serviceListenFor[key] === announcedService[key]) {
-						match = true;
-					} else {
-						match = false;
-					}
-				});
+    // Setup message handler
+    this.socket.on('message', function (data) {
+        var announcedService = JSONObjFromString(data);
 
-				if (match) {
-					self.emit('discovery', announcedService);
+        if (announcedService) {
+            if (self.serviceListenFor) {
+                var match = false;
 
-					if (self.serviceListenOnce) {
-						self.close();
-					}
-				} else {
-					// no match
-				}
-			} else {
-				self.emit('discovery', announcedService);
+                Object.keys(self.serviceListenFor).forEach(function(key) {
+                    if (self.serviceListenFor[key] === announcedService[key]) {
+                        match = true;
+                    } else {
+                        match = false;
+                    }
+                });
 
-				if (self.serviceListenOnce) {
-					self.close();
-				}
-			}
-		}
-	});
+                if (match) {
+                    self.emit('discovery', announcedService);
 
-	this.socket.on('error', function (e) {
-		if (e.code === 'EADDRINUSE') {
-			setTimeout(self.tryBinding, 210);
-			console.log('[UDPServiceDiscovery] Retrying to open port');
-		} else {
-			console.log('[UDPServiceDiscovery] Err: ' + e);
-		}
-	});
+                    if (self.serviceListenOnce) {
+                        self.close();
+                    }
+                } else {
+                    // no match
+                }
+            } else {
+                self.emit('discovery', announcedService);
 
-	this.socket.on('listening', function () {
-		self.socket.setBroadcast(true);
+                if (self.serviceListenOnce) {
+                    self.close();
+                }
+            }
+        }
+    });
 
-    // self.socket.setMulticastLoopback(true);
-    // self.socket.addMembership(state.address, state.host);
+    this.socket.on('error', function (e) {
+        if (e.code === 'EADDRINUSE') {
+            setTimeout(self.tryBinding, 210);
+            console.log('[UDPServiceDiscovery] Retrying to open port');
+        } else {
+            console.log('[UDPServiceDiscovery] Err: ' + e);
+        }
+    });
 
-		var address = this.address();
-		console.log('Listening on ' + address.address + ':' + address.port);
-	});
+    this.socket.on('listening', function () {
+        self.socket.setBroadcast(true);
 
-	this.socket.on('close', function () {
-		console.log('closing socket');
-	});
+        // self.socket.setMulticastLoopback(true);
+        // self.socket.addMembership(state.address, state.host);
+
+        var address = this.address();
+        console.log('Listening on ' + address.address + ':' + address.port);
+    });
+
+    this.socket.on('close', function () {
+        console.log('closing socket');
+    });
 }
 
 // name, ip, port, json object
 // json object
 UDPServiceDiscovery.prototype.broadcast = function broadcast() {
-	var service = {};
-	switch (arguments.length) {
-		case 4:
-			if (typeof arguments[3] === 'string') {
-				service = JSONObjFromString(arguments[3]);
-			} else {
-				service = arguments[3];
-			}
-		case 3:
-			service.port = arguments[2];
-		case 2:
-			service.host = arguments[1];
-			service.name = arguments[0];
-			break;
-		case 1:
-			service = JSONObjFromString(arguments[0]);
-			break;
-	}
+    var service = {};
+    var self = this;
+    var netmask;
+    var host;
+    var broadcastAddress;
+    var announceMessage;
 
-    // fill in IP if null
-  	service.host = service.host || getLocalIPAndNetmask()[0][0];
-    this.netmask = getLocalIPAndNetmask()[0][1];
-    this.broadcastAddress = getBroadcastAddress(service.host, this.netmask);
-	
-	console.log(this.broadcastAddress);
-	var announceMessage = new Buffer(JSON.stringify(service));
-	var self = this;
+    switch (arguments.length) {
+        case 4:
+            if (typeof arguments[3] === 'string') {
+                service = JSONObjFromString(arguments[3]);
+            } else {
+                service = arguments[3];
+            }
+        case 3:
+            service.port = arguments[2];
+        case 2:
+            service.host = arguments[1];
+            service.name = arguments[0];
+            break;
+        case 1:
+            service = JSONObjFromString(arguments[0]);
+            break;
+    }
 
-	function announce() {
-		self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, self.broadcastAddress, function (err, bytes) {
-			if (err) {
-				throw err;
-			}
-		});
-	}
+    service.host = null;
+
+
+    function announce() {
+        var mask = getLocalIPAndNetmask();
+
+        if(mask.length > 0 && mask[0].length > 0) {
+            netmask = mask[0][1];
+            host = mask[0][0];
+            broadcastAddress = getBroadcastAddress(service.host, netmask);
+            if (host !== service.host) {
+                service.host = host;
+                announceMessage = new Buffer(JSON.stringify(service));
+            }
+            self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, broadcastAddress, function (err, bytes) {
+                if (err) {
+                    console.log("UDP - Error announcing!", err);
+                    throw err;
+                } else {
+
+                }
+                console.log("UDP - announce ", service.host);
+            });
+
+        } else {
+            // Not connected
+            console.log("Not Connected");
+        }
+    }
 
     // announce 4 times per seconds
-	setInterval(announce, this.announceInterval);
+    setInterval(announce, this.announceInterval);
 };
 
 UDPServiceDiscovery.prototype.listen = function listen(listenFor) {
-	this.serviceListenOnce = false;
+    this.serviceListenOnce = false;
 
-	if (listenFor) {
-		if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
-			this.serviceListenFor = {};
-			this.serviceListenFor.name = listenFor;
-		} else {
-			if (typeof listenFor  === 'string') {
-				this.serviceListenFor = JSONObjFromString(listenFor);
-			} else {
-				this.serviceListenFor = listenFor;
-			}
-		}
-	}
+    if (listenFor) {
+        if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+            this.serviceListenFor = {};
+            this.serviceListenFor.name = listenFor;
+        } else {
+            if (typeof listenFor  === 'string') {
+                this.serviceListenFor = JSONObjFromString(listenFor);
+            } else {
+                this.serviceListenFor = listenFor;
+            }
+        }
+    }
 
-	this.tryBinding();
+    this.tryBinding();
 };
 
 UDPServiceDiscovery.prototype.listenOnce = function listenOnce (listenFor) {
-	this.serviceListenOnce = true;
-	if (listenFor) {
-		if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
-			this.serviceListenFor = {};
-			this.serviceListenFor.name = listenFor;
-		} else {
-			if (typeof listenFor  === 'string') {
-				this.serviceListenFor = JSONObjFromString(listenFor);
-			} else {
-				this.serviceListenFor = listenFor;
-			}
-		}
-	}
+    this.serviceListenOnce = true;
+    if (listenFor) {
+        if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+            this.serviceListenFor = {};
+            this.serviceListenFor.name = listenFor;
+        } else {
+            if (typeof listenFor  === 'string') {
+                this.serviceListenFor = JSONObjFromString(listenFor);
+            } else {
+                this.serviceListenFor = listenFor;
+            }
+        }
+    }
 
-	this.tryBinding();
+    this.tryBinding();
 };
 
 UDPServiceDiscovery.prototype.tryBinding = function tryBinding() {
-	this.socket.bind(this.broadcasterPort, this.broadcasterAddress);
+    this.socket.bind(this.broadcasterPort, this.broadcasterAddress);
 };
 
 UDPServiceDiscovery.prototype.close = function close() {
-	this.socket.close();
+    this.socket.close();
 };
 
 util.inherits(UDPServiceDiscovery, EventEmitter);
 
 function JSONObjFromString(jsonString) {
-	try {
-		var o = JSON.parse(jsonString);
+    try {
+        var o = JSON.parse(jsonString);
 
         // Handle non-exception-throwing cases:
         // Neither JSON.parse(false) or JSON.parse(1234) throw errors, hence the type-checking,
         // but... JSON.parse(null) returns null, and typeof null === "object",
         // so we must check for that, too. Thankfully, null is falsey, so this suffices:
-		if (o && typeof o === 'object') {
-			return o;
-		}
-	} catch (err) { }
-	return null;
+        if (o && typeof o === 'object') {
+            return o;
+        }
+    } catch (err) { }
+    return null;
 }
 
 function getLocalIPAndNetmask() {
-	var networkInterfaces = require('os').networkInterfaces();
-	var matches = [];
+    var networkInterfaces = require('os').networkInterfaces();
+    var matches = [];
 
-	Object.keys(networkInterfaces).forEach(function (item) {
-		networkInterfaces[item].forEach(function (address) {
-			if (address.internal === false && address.family === 'IPv4') {
-                matches.push([address.address, address.netmask]);
-			}
-		});
-	});
+    Object.keys(networkInterfaces).forEach(function (item) {
+        networkInterfaces[item].forEach(function (address) {
+            if (address.internal === false && address.family === 'IPv4') {
+                matches.push([address.address, address.netmask]);
+            }
+        });
+    });
 
-	return matches;
+    return matches;
 }
 
 function getBroadcastAddress(ip, netmask) {
-    var block = new Netmask(ip  + "/" +  netmask);
-    
-    return block.broadcast;
+    var block = new Netmask(ip  + "/" +  netmask);
+
+    return block.broadcast;
 }
