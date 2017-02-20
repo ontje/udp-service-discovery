@@ -5,10 +5,16 @@ var Netmask = require('netmask').Netmask;
 
 module.exports = UDPServiceDiscovery;
 
-function UDPServiceDiscovery (opts) {
+function UDPServiceDiscovery(opts) {
+
+
     if (!(this instanceof UDPServiceDiscovery)) {
         return new UDPServiceDiscovery(opts);
     }
+    var self = this;
+    this.emit('statusChanged', this.status);
+    this.status = "INITTIALIZING";
+    this.service = {};
 
     opts = opts || {};
 
@@ -19,7 +25,6 @@ function UDPServiceDiscovery (opts) {
     this.serviceListenFor = null;
     this.serviceListenOnce = false;
 
-    var self = this;
 
     // Setup UDP socket
     this.socket = dgram.createSocket('udp4');
@@ -32,7 +37,7 @@ function UDPServiceDiscovery (opts) {
             if (self.serviceListenFor) {
                 var match = false;
 
-                Object.keys(self.serviceListenFor).forEach(function(key) {
+                Object.keys(self.serviceListenFor).forEach(function (key) {
                     if (self.serviceListenFor[key] === announcedService[key]) {
                         match = true;
                     } else {
@@ -86,7 +91,8 @@ function UDPServiceDiscovery (opts) {
 // name, ip, port, json object
 // json object
 UDPServiceDiscovery.prototype.broadcast = function broadcast() {
-    var service = {};
+    this.service = {host: null};
+    var service = this.service;
     var self = this;
     var netmask;
     var host;
@@ -96,48 +102,53 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
     switch (arguments.length) {
         case 4:
             if (typeof arguments[3] === 'string') {
-                service = JSONObjFromString(arguments[3]);
+                this.service = JSONObjFromString(arguments[3]);
             } else {
-                service = arguments[3];
+                this.service = arguments[3];
             }
         case 3:
-            service.port = arguments[2];
+            this.service.port = arguments[2];
         case 2:
-            service.host = arguments[1];
-            service.name = arguments[0];
+            this.service.host = arguments[1];
+            this.service.name = arguments[0];
             break;
         case 1:
-            service = JSONObjFromString(arguments[0]);
+            this.service = JSONObjFromString(arguments[0]);
             break;
     }
-
-    service.host = null;
-
+    announceMessage = new Buffer(JSON.stringify(this.service));
 
     function announce() {
         var mask = getLocalIPAndNetmask();
-
-        if(mask.length > 0 && mask[0].length > 0) {
+        var service = self.service;
+        if (mask.length > 0 && mask[0].length > 0) {
             netmask = mask[0][1];
             host = mask[0][0];
-            broadcastAddress = getBroadcastAddress(service.host, netmask);
-            if (host !== service.host) {
-                service.host = host;
-                announceMessage = new Buffer(JSON.stringify(service));
+            broadcastAddress = getBroadcastAddress(host, netmask);
+            if (host !== self.service.host) {
+                self.service.host = host;
+                announceMessage = new Buffer(JSON.stringify(self.service));
+                self.emit('statusChanged', self.status);
             }
-            self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, broadcastAddress, function (err, bytes) {
-                if (err) {
-                    console.log("UDP - Error announcing!", err);
-                    throw err;
-                } else {
+            if (host) {
+                self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, broadcastAddress, function (err, bytes) {
+                    if (err) {
+                        console.log("UDP - Error announcing!", err);
+                        throw err;
+                    } else {
+                        if (self.status !== 'BROADCASTING') {
+                            self.status = "BROADCASTING";
+                            self.emit('statusChanged', self.status);
+                        }
+                    }
 
-                }
-                console.log("UDP - announce ", service.host);
-            });
+                });
 
+            }
         } else {
             // Not connected
-            console.log("Not Connected");
+            self.status = "NOT_CONNECTED";
+            self.emit('statusChanged', self.status);
         }
     }
 
@@ -149,11 +160,11 @@ UDPServiceDiscovery.prototype.listen = function listen(listenFor) {
     this.serviceListenOnce = false;
 
     if (listenFor) {
-        if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+        if (typeof listenFor === 'string' && !JSONObjFromString(listenFor)) {
             this.serviceListenFor = {};
             this.serviceListenFor.name = listenFor;
         } else {
-            if (typeof listenFor  === 'string') {
+            if (typeof listenFor === 'string') {
                 this.serviceListenFor = JSONObjFromString(listenFor);
             } else {
                 this.serviceListenFor = listenFor;
@@ -164,14 +175,14 @@ UDPServiceDiscovery.prototype.listen = function listen(listenFor) {
     this.tryBinding();
 };
 
-UDPServiceDiscovery.prototype.listenOnce = function listenOnce (listenFor) {
+UDPServiceDiscovery.prototype.listenOnce = function listenOnce(listenFor) {
     this.serviceListenOnce = true;
     if (listenFor) {
-        if (typeof listenFor  === 'string' && !JSONObjFromString(listenFor)) {
+        if (typeof listenFor === 'string' && !JSONObjFromString(listenFor)) {
             this.serviceListenFor = {};
             this.serviceListenFor.name = listenFor;
         } else {
-            if (typeof listenFor  === 'string') {
+            if (typeof listenFor === 'string') {
                 this.serviceListenFor = JSONObjFromString(listenFor);
             } else {
                 this.serviceListenFor = listenFor;
@@ -203,7 +214,8 @@ function JSONObjFromString(jsonString) {
         if (o && typeof o === 'object') {
             return o;
         }
-    } catch (err) { }
+    } catch (err) {
+    }
     return null;
 }
 
@@ -223,7 +235,8 @@ function getLocalIPAndNetmask() {
 }
 
 function getBroadcastAddress(ip, netmask) {
-    var block = new Netmask(ip  + "/" +  netmask);
+    console.log(ip, netmask);
+    var block = new Netmask(ip + "/" + netmask);
 
     return block.broadcast;
 }
