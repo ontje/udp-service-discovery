@@ -20,7 +20,7 @@ function UDPServiceDiscovery(opts) {
 
     this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
     this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
-    this.announceInterval = typeof opts.announceInterval === 'undefined' ? 250 : opts.announceInterval;
+    this.announceInterval = typeof opts.announceInterval === 'undefined' ? 1000 : opts.announceInterval;
 
     this.serviceListenFor = null;
     this.serviceListenOnce = false;
