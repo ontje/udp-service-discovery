@@ -115,7 +115,6 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 
     announce = (() => {
         var mask = getLocalIPAndNetmask();
-        //var service = this.service;
         if (mask.length > 0 && mask[0].length > 0) {
             netmask = mask[0][1];
             host = mask[0][0];
