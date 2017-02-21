@@ -7,14 +7,12 @@ module.exports = UDPServiceDiscovery;
 
 function UDPServiceDiscovery(opts) {
 
-
     if (!(this instanceof UDPServiceDiscovery)) {
         return new UDPServiceDiscovery(opts);
     }
-    var self = this;
+
     this.emit('statusChanged', this.status);
-    this.status = "INITTIALIZING";
-    this.service = {};
+    this.status = "INITIALIZING";
 
     opts = opts || {};
 
@@ -25,75 +23,72 @@ function UDPServiceDiscovery(opts) {
     this.serviceListenFor = null;
     this.serviceListenOnce = false;
 
-
     // Setup UDP socket
     this.socket = dgram.createSocket('udp4');
 
     // Setup message handler
-    this.socket.on('message', function (data) {
+    this.socket.on('message', ((data) => {
         var announcedService = JSONObjFromString(data);
 
         if (announcedService) {
-            if (self.serviceListenFor) {
+            if (this.serviceListenFor) {
                 var match = false;
 
-                Object.keys(self.serviceListenFor).forEach(function (key) {
-                    if (self.serviceListenFor[key] === announcedService[key]) {
+                Object.keys(this.serviceListenFor).forEach(((key) => {
+                    if (this.serviceListenFor[key] === announcedService[key]) {
                         match = true;
                     } else {
                         match = false;
                     }
-                });
+                }));
 
                 if (match) {
-                    self.emit('discovery', announcedService);
+                    this.emit('discovery', announcedService);
 
-                    if (self.serviceListenOnce) {
-                        self.close();
+                    if (this.serviceListenOnce) {
+                        this.close();
                     }
                 } else {
                     // no match
                 }
             } else {
-                self.emit('discovery', announcedService);
+                this.emit('discovery', announcedService);
 
-                if (self.serviceListenOnce) {
-                    self.close();
+                if (this.serviceListenOnce) {
+                    this.close();
                 }
             }
         }
-    });
+    }));
 
-    this.socket.on('error', function (e) {
+    this.socket.on('error', ((e) => {
         if (e.code === 'EADDRINUSE') {
-            setTimeout(self.tryBinding, 210);
+            setTimeout(this.tryBinding, 210);
             console.log('[UDPServiceDiscovery] Retrying to open port');
         } else {
             console.log('[UDPServiceDiscovery] Err: ' + e);
         }
-    });
+    }));
 
-    this.socket.on('listening', function () {
-        self.socket.setBroadcast(true);
+    this.socket.on('listening', (() => {
+        this.socket.setBroadcast(true);
 
         // self.socket.setMulticastLoopback(true);
         // self.socket.addMembership(state.address, state.host);
 
-        var address = this.address();
+        var address = this.socket.address();
         console.log('Listening on ' + address.address + ':' + address.port);
-    });
+    }));
 
-    this.socket.on('close', function () {
+    this.socket.on('close', (() => {
         console.log('closing socket');
-    });
+    }));
 }
 
 // name, ip, port, json object
 // json object
 UDPServiceDiscovery.prototype.broadcast = function broadcast() {
-    this.service = {host: null};
-    var service = this.service;
-    var self = this;
+    var service = {host: null};
     var netmask;
     var host;
     var broadcastAddress;
@@ -102,57 +97,57 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
     switch (arguments.length) {
         case 4:
             if (typeof arguments[3] === 'string') {
-                this.service = JSONObjFromString(arguments[3]);
+                service = JSONObjFromString(arguments[3]);
             } else {
-                this.service = arguments[3];
+                service = arguments[3];
             }
         case 3:
-            this.service.port = arguments[2];
+            service.port = arguments[2];
         case 2:
-            this.service.host = arguments[1];
-            this.service.name = arguments[0];
+            service.host = arguments[1];
+            service.name = arguments[0];
             break;
         case 1:
-            this.service = JSONObjFromString(arguments[0]);
+            service = JSONObjFromString(arguments[0]);
             break;
     }
-    announceMessage = new Buffer(JSON.stringify(this.service));
+    announceMessage = new Buffer(JSON.stringify(service));
 
-    function announce() {
+    announce = (() => {
         var mask = getLocalIPAndNetmask();
-        var service = self.service;
+        //var service = this.service;
         if (mask.length > 0 && mask[0].length > 0) {
             netmask = mask[0][1];
             host = mask[0][0];
             broadcastAddress = getBroadcastAddress(host, netmask);
-            if (host !== self.service.host) {
-                self.service.host = host;
-                announceMessage = new Buffer(JSON.stringify(self.service));
-                self.emit('statusChanged', self.status);
+            if (host !== service.host) {
+                service.host = host;
+                announceMessage = new Buffer(JSON.stringify(service));
+                this.emit('statusChanged', this.status);
             }
             if (host) {
-                self.socket.send(announceMessage, 0, announceMessage.length, self.broadcasterPort, broadcastAddress, function (err, bytes) {
+                this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, ((err, bytes) => {
                     if (err) {
                         console.log("UDP - Error announcing!", err);
                         throw err;
                     } else {
-                        if (self.status !== 'BROADCASTING') {
-                            self.status = "BROADCASTING";
-                            self.emit('statusChanged', self.status);
+                        if (this.status !== 'BROADCASTING') {
+                            this.status = "BROADCASTING";
+                            this.emit('statusChanged', this.status);
                         }
                     }
 
-                });
+                }));
 
             }
         } else {
             // Not connected
-            self.status = "NOT_CONNECTED";
-            self.emit('statusChanged', self.status);
+            this.status = "NOT_CONNECTED";
+            this.emit('statusChanged', this.status);
         }
-    }
+    });
 
-    // announce 4 times per seconds
+    // announce once per second
     setInterval(announce, this.announceInterval);
 };
 
