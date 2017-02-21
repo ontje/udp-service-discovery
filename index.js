@@ -111,6 +111,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
             service = JSONObjFromString(arguments[0]);
             break;
     }
+
     announceMessage = new Buffer(JSON.stringify(service));
 
     announce = (() => {
@@ -119,11 +120,13 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
             netmask = mask[0][1];
             host = mask[0][0];
             broadcastAddress = getBroadcastAddress(host, netmask);
+
             if (host !== service.host) {
                 service.host = host;
                 announceMessage = new Buffer(JSON.stringify(service));
                 this.emit('statusChanged', this.status);
             }
+
             if (host) {
                 this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, ((err, bytes) => {
                     if (err) {
@@ -135,9 +138,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
                             this.emit('statusChanged', this.status);
                         }
                     }
-
                 }));
-
             }
         } else {
             // Not connected
