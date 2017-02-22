@@ -1,6 +1,6 @@
 # udp-service-discovery
 
-Broadcasts Services via UDP (default every 250ms via port 12345) and listens to them on the client.
+Broadcasts Services via UDP (default every second via port 12345) and listens to them on the client.
 If listenOnce(servicename) is used, the listening port will be unbound upon recieving a matching service. Client automatically tries to rebind if port is in use, so multiple instances can easyly run on the same host (they will bind one after another).
 
 ## Example
