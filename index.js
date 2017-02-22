@@ -34,13 +34,13 @@ function UDPServiceDiscovery(opts) {
             if (this.serviceListenFor) {
                 var match = false;
 
-                Object.keys(this.serviceListenFor).forEach(((key) => {
+                Object.keys(this.serviceListenFor).forEach(key => {
                     if (this.serviceListenFor[key] === announcedService[key]) {
                         match = true;
                     } else {
                         match = false;
                     }
-                }));
+                });
 
                 if (match) {
                     this.emit('discovery', announcedService);
@@ -61,16 +61,16 @@ function UDPServiceDiscovery(opts) {
         }
     }));
 
-    this.socket.on('error', ((e) => {
+    this.socket.on('error', e => {
         if (e.code === 'EADDRINUSE') {
             setTimeout(this.tryBinding, 210);
-            console.log('[UDPServiceDiscovery] Retrying to open port');
+            console.log('[UDPServiceDiscovery] Retrying to open port.');
         } else {
             console.log('[UDPServiceDiscovery] Err: ' + e);
         }
-    }));
+    });
 
-    this.socket.on('listening', (() => {
+    this.socket.on('listening', () => {
         this.socket.setBroadcast(true);
 
         // self.socket.setMulticastLoopback(true);
@@ -78,11 +78,11 @@ function UDPServiceDiscovery(opts) {
 
         var address = this.socket.address();
         console.log('Listening on ' + address.address + ':' + address.port);
-    }));
+    });
 
-    this.socket.on('close', (() => {
-        console.log('closing socket');
-    }));
+    this.socket.on('close', () => {
+        console.log('Closing socket.');
+    });
 }
 
 // name, ip, port, json object
