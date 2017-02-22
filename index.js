@@ -27,7 +27,7 @@ function UDPServiceDiscovery(opts) {
     this.socket = dgram.createSocket('udp4');
 
     // Setup message handler
-    this.socket.on('message', ((data) => {
+    this.socket.on('message', data => {
         var announcedService = JSONObjFromString(data);
 
         if (announcedService) {
@@ -59,7 +59,7 @@ function UDPServiceDiscovery(opts) {
                 }
             }
         }
-    }));
+    });
 
     this.socket.on('error', e => {
         if (e.code === 'EADDRINUSE') {
@@ -128,7 +128,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
             }
 
             if (host) {
-                this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, ((err, bytes) => {
+                this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, (err, bytes) => {
                     if (err) {
                         console.log("UDP - Error announcing!", err);
                         throw err;
@@ -138,7 +138,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
                             this.emit('statusChanged', this.status);
                         }
                     }
-                }));
+                });
             }
         } else {
             // Not connected
