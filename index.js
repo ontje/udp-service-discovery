@@ -85,16 +85,20 @@ function UDPServiceDiscovery(opts) {
     });
 }
 
-// name, ip, port, json object
-// json object
-UDPServiceDiscovery.prototype.broadcast = function broadcast() {
-    var service = {host: null};
+// name, ip, port, json object, broadcast-repeats (0 or any number)
+UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg) {
+    var service = { host: null };
+    var interval;
+    var repeat = 0;
+    var runs = 0;
     var netmask;
     var host;
     var broadcastAddress;
     var announceMessage;
 
     switch (arguments.length) {
+        case 5:
+            repeat = arguments[4];
         case 4:
             if (typeof arguments[3] === 'string') {
                 service = JSONObjFromString(arguments[3]);
@@ -115,6 +119,12 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
     announceMessage = new Buffer(JSON.stringify(service));
 
     announce = (() => {
+        if (repeat != 0 && runs >= repeat) {
+            clearInterval(interval);
+            console.log('Finished ' + repeat + ' broadcasts.');
+            return;
+        }
+
         var mask = getLocalIPAndNetmask();
         if (mask.length > 0 && mask[0].length > 0) {
             netmask = mask[0][1];
@@ -129,6 +139,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
 
             if (host) {
                 this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, (err, bytes) => {
+                    runs++;
                     if (err) {
                         console.log("UDP - Error announcing!", err);
                         throw err;
@@ -148,7 +159,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast() {
     });
 
     // announce once per second
-    setInterval(announce, this.announceInterval);
+    interval = setInterval(announce, this.announceInterval);
 };
 
 UDPServiceDiscovery.prototype.listen = function listen(listenFor) {
