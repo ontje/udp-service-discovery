@@ -34,11 +34,12 @@ function UDPServiceDiscovery(opts) {
             if (this.serviceListenFor) {
                 var match = false;
 
-                Object.keys(this.serviceListenFor).forEach(key => {
-                    if (this.serviceListenFor[key] === announcedService[key]) {
-                        match = true;
-                    } else {
+                Object.keys(this.serviceListenFor).some(key => {
+                    if (this.serviceListenFor[key] != announcedService[key]) {
                         match = false;
+                        return true; // returning true on the first element that doesn't match to break the loop
+                    } else {
+                        match = true;
                     }
                 });
 
