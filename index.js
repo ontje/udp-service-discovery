@@ -63,12 +63,7 @@ function UDPServiceDiscovery(opts) {
     });
 
     this.socket.on('error', e => {
-        if (e.code === 'EADDRINUSE') {
-            setTimeout(this.tryBinding, 210);
-            console.log('[UDPServiceDiscovery] Retrying to open port.');
-        } else {
-            console.log('[UDPServiceDiscovery] Err: ' + e);
-        }
+        console.log('UDPServiceDiscovery SocketError: ' + e);
     });
 
     this.socket.on('listening', () => {
@@ -78,11 +73,16 @@ function UDPServiceDiscovery(opts) {
         // self.socket.addMembership(state.address, state.host);
 
         var address = this.socket.address();
-        console.log('Listening on ' + address.address + ':' + address.port);
+
+        if (this.listenOnce) {
+            console.log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
+        } else {
+            console.log('UDPServiceDiscovery listening (forever) on ' + address.address + ':' + address.port);
+        }
     });
 
     this.socket.on('close', () => {
-        console.log('Closing socket.');
+        console.log('UDPServiceDiscovery Closing socket.');
     });
 }
 
