@@ -24,7 +24,7 @@ function UDPServiceDiscovery(opts) {
     this.serviceListenOnce = false;
 
     // Setup UDP socket
-    this.socket = dgram.createSocket('udp4');
+    this.socket = dgram.createSocket({type: 'udp4', reuseAddr: true});
 
     // Setup message handler
     this.socket.on('message', data => {
