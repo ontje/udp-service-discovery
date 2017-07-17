@@ -19,6 +19,8 @@ function UDPServiceDiscovery(opts) {
     this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
     this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
     this.announceInterval = typeof opts.announceInterval === 'undefined' ? 1000 : opts.announceInterval;
+    
+    this.retryInterval = typeof opts.retryInterval === 'undefined' ? 999 : opts.retryInterval;
 
     this.serviceListenFor = null;
     this.serviceListenOnce = false;
@@ -63,7 +65,12 @@ function UDPServiceDiscovery(opts) {
     });
 
     this.socket.on('error', e => {
-        console.log('UDPServiceDiscovery SocketError: ' + e);
+        if (e.code === 'EADDRINUSE') {
+            console.log('UDPServiceDiscovery address/port ' + e.address + ':' + e.port + ' in use, retrying in ' + this.retryInterval + ' ms');
+            setTimeout(this.tryBinding.bind(this), this.retryInterval);
+        } else {
+            console.log('UDPServiceDiscovery SocketError: ' + e);
+        }
     });
 
     this.socket.on('listening', () => {
