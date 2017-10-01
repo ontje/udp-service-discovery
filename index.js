@@ -14,13 +14,14 @@ function UDPServiceDiscovery(opts) {
     this.emit('statusChanged', this.status);
     this.status = "INITIALIZING";
 
-    opts = opts || {};
+    this.opts = opts || {};
+    var self = this;
 
-    this.broadcasterPort = typeof opts.port === 'undefined' ? 12345 : opts.port;
-    this.broadcasterAddress = typeof opts.address === 'undefined' ? null : opts.address;
-    this.announceInterval = typeof opts.announceInterval === 'undefined' ? 1000 : opts.announceInterval;
-    
-    this.retryInterval = typeof opts.retryInterval === 'undefined' ? 999 : opts.retryInterval;
+    this.broadcasterPort = typeof this.opts.port === 'undefined' ? 12345 : this.opts.port;
+    this.broadcasterAddress = typeof this.opts.address === 'undefined' ? null : this.opts.address;
+    this.announceInterval = typeof this.opts.announceInterval === 'undefined' ? 1000 : this.opts.announceInterval;
+
+    this.retryInterval = typeof this.opts.retryInterval === 'undefined' ? 999 : this.opts.retryInterval;
 
     this.serviceListenFor = null;
     this.serviceListenOnce = false;
@@ -66,9 +67,12 @@ function UDPServiceDiscovery(opts) {
 
     this.socket.on('error', e => {
         if (e.code === 'EADDRINUSE') {
-            console.log('UDPServiceDiscovery address/port ' + e.address + ':' + e.port + ' in use, retrying in ' + this.retryInterval + ' ms');
+            if (self.opts.debug === true) {
+                console.log('UDPServiceDiscovery address/port ' + e.address + ':' + e.port + ' in use, retrying in ' + this.retryInterval + ' ms');
+            }
+
             setTimeout(this.tryBinding.bind(this), this.retryInterval);
-        } else {
+        } else if (self.opts.debug === true) {
             console.log('UDPServiceDiscovery SocketError: ' + e);
         }
     });
@@ -81,15 +85,19 @@ function UDPServiceDiscovery(opts) {
 
         var address = this.socket.address();
 
-        if (this.listenOnce) {
-            console.log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
-        } else {
-            console.log('UDPServiceDiscovery listening (forever) on ' + address.address + ':' + address.port);
+        if (self.opts.debug === true) {
+            if (this.listenOnce) {
+                console.log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
+            } else {
+                console.log('UDPServiceDiscovery listening (forever) on ' + address.address + ':' + address.port);
+            }
         }
     });
 
     this.socket.on('close', () => {
-        console.log('UDPServiceDiscovery Closing socket.');
+          if (self.opts.debug === true) {
+            console.log('UDPServiceDiscovery Closing socket.');
+          }
     });
 }
 
@@ -126,10 +134,14 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg
 
     announceMessage = new Buffer(JSON.stringify(service));
 
+    var self = this;
+
     announce = (() => {
         if (repeat != 0 && runs >= repeat) {
             clearInterval(interval);
-            console.log('Finished ' + repeat + ' broadcasts.');
+            if (self.opts.debug === true) {
+              console.log('Finished ' + repeat + ' broadcasts.');
+            }
             return;
         }
 
@@ -137,7 +149,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg
         if (mask.length > 0 && mask[0].length > 0) {
             netmask = mask[0][1];
             host = mask[0][0];
-            broadcastAddress = getBroadcastAddress(host, netmask);
+            broadcastAddress = getBroadcastAddress(self, host, netmask);
 
             if (host !== service.host) {
                 service.host = host;
@@ -248,8 +260,11 @@ function getLocalIPAndNetmask() {
     return matches;
 }
 
-function getBroadcastAddress(ip, netmask) {
-    console.log(ip, netmask);
+function getBroadcastAddress(sender, ip, netmask) {
+    if (sender.opts.debug === true) {
+      console.log(ip, netmask);
+    }
+
     var block = new Netmask(ip + "/" + netmask);
 
     return block.broadcast;
