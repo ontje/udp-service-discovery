@@ -101,6 +101,8 @@ function UDPServiceDiscovery(opts) {
     });
 }
 
+util.inherits(UDPServiceDiscovery, EventEmitter);
+
 // name, ip, port, json object, broadcast-repeats (0 or any number)
 UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg) {
     var service = { host: null };
@@ -226,8 +228,6 @@ UDPServiceDiscovery.prototype.tryBinding = function tryBinding() {
 UDPServiceDiscovery.prototype.close = function close() {
     this.socket.close();
 };
-
-util.inherits(UDPServiceDiscovery, EventEmitter);
 
 function JSONObjFromString(jsonString) {
     try {
