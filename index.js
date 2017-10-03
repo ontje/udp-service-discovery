@@ -67,13 +67,11 @@ function UDPServiceDiscovery(opts) {
 
     this.socket.on('error', e => {
         if (e.code === 'EADDRINUSE') {
-            if (self.opts.debug === true) {
-                console.log('UDPServiceDiscovery address/port ' + e.address + ':' + e.port + ' in use, retrying in ' + this.retryInterval + ' ms');
-            }
+            self._log('UDPServiceDiscovery address/port ' + e.address + ':' + e.port + ' in use, retrying in ' + this.retryInterval + ' ms');
 
             setTimeout(this.tryBinding.bind(this), this.retryInterval);
-        } else if (self.opts.debug === true) {
-            console.log('UDPServiceDiscovery SocketError: ' + e);
+        } else {
+            self._log('UDPServiceDiscovery SocketError: ' + e);
         }
     });
 
@@ -85,19 +83,15 @@ function UDPServiceDiscovery(opts) {
 
         var address = this.socket.address();
 
-        if (self.opts.debug === true) {
-            if (this.listenOnce) {
-                console.log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
-            } else {
-                console.log('UDPServiceDiscovery listening (forever) on ' + address.address + ':' + address.port);
-            }
+        if (this.listenOnce) {
+            self._log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
+        } else {
+            self._log('UDPServiceDiscovery listening (forever) on ' + address.address + ':' + address.port);
         }
     });
 
     this.socket.on('close', () => {
-          if (self.opts.debug === true) {
-            console.log('UDPServiceDiscovery Closing socket.');
-          }
+        self._log('UDPServiceDiscovery Closing socket.');
     });
 }
 
@@ -141,9 +135,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg
     announce = (() => {
         if (repeat != 0 && runs >= repeat) {
             clearInterval(interval);
-            if (self.opts.debug === true) {
-              console.log('Finished ' + repeat + ' broadcasts.');
-            }
+            self._log('Finished ' + repeat + ' broadcasts.');
             return;
         }
 
@@ -163,7 +155,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg
                 this.socket.send(announceMessage, 0, announceMessage.length, this.broadcasterPort, broadcastAddress, (err, bytes) => {
                     runs++;
                     if (err) {
-                        console.log("UDP - Error announcing!", err);
+                        self._log("UDP - Error announcing!", err);
                         throw err;
                     } else {
                         if (this.status !== 'BROADCASTING') {
@@ -229,6 +221,13 @@ UDPServiceDiscovery.prototype.close = function close() {
     this.socket.close();
 };
 
+UDPServiceDiscovery.prototype._log = function log() {
+    if (this.opts.debug === true) {
+        var args = Array.prototype.slice.call(arguments);
+        console.log.apply(console, args);
+    }
+};
+
 function JSONObjFromString(jsonString) {
     try {
         var o = JSON.parse(jsonString);
@@ -261,9 +260,7 @@ function getLocalIPAndNetmask() {
 }
 
 function getBroadcastAddress(sender, ip, netmask) {
-    if (sender.opts.debug === true) {
-      console.log(ip, netmask);
-    }
+    sender._log(ip, netmask);
 
     var block = new Netmask(ip + "/" + netmask);
 
