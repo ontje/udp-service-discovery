@@ -3,6 +3,9 @@ var dgram = require('dgram');
 var EventEmitter = require('events').EventEmitter;
 var Netmask = require('netmask').Netmask;
 
+// named export for typescript users
+exports.newUDPServiceDiscovery = UDPServiceDiscovery;
+// default export for node
 module.exports = UDPServiceDiscovery;
 
 function UDPServiceDiscovery(opts) {
