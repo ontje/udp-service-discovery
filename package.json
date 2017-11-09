@@ -3,6 +3,7 @@
   "description": "Simple and cheap service discovery broadcast and listener",
   "version": "0.0.12",
   "main": "index.js",
+  "types": "index.d.ts",
   "dependencies": {
     "netmask": "^1.0.6"
   },
@@ -11,7 +12,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
-    "index.js"
+    "index.js",
+    "index.d.ts"
   ],
   "repository": {
     "type": "git",
