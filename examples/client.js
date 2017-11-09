@@ -1,4 +1,4 @@
-var udpDSCV = require('./../index.js')({port: 8000});
+var udpDSCV = require('./../index.js')({ port: 8000, debug: true });
 
 udpDSCV.listenOnce({name: "my-server", protocol: "ws"});
 
