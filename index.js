@@ -132,7 +132,7 @@ UDPServiceDiscovery.prototype.broadcast = function broadcast(name, ip, port, msg
 
     announceMessage = new Buffer(JSON.stringify(service));
 
-    announce = (() => {
+    var announce = (() => {
         if (repeat != 0 && runs >= repeat) {
             clearInterval(interval);
             this._log('Finished ' + repeat + ' broadcasts.');
