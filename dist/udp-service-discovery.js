@@ -180,8 +180,6 @@ class UDPServiceDiscovery extends events_1.EventEmitter {
         });
         this._socket.on('listening', () => {
             this._socket.setBroadcast(true);
-            // this.socket.setMulticastLoopback(true);
-            // this.socket.addMembership(state.address, state.host);
             const address = this._socket.address();
             if (this.listenOnce) {
                 this._log('UDPServiceDiscovery listening (once) on ' + address.address + ':' + address.port);
