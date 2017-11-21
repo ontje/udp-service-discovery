@@ -8,6 +8,7 @@ export interface UDPServiceDiscoveryOptions {
     address?: string;
     announceInterval?: number;
     retryInterval?: number;
+    debug?: boolean;
 }
 
 interface Service {
@@ -34,7 +35,8 @@ export class UDPServiceDiscovery extends EventEmitter {
             port: 12345,
             address: null,
             announceInterval: 1000,
-            retryInterval: 999
+            retryInterval: 999,
+            debug: false
         };
 
         if (typeof opts !== 'undefined') {
@@ -236,7 +238,9 @@ export class UDPServiceDiscovery extends EventEmitter {
     }
 
     private _log(...msg) {
-        console.log(...msg);
+        if (this._opts.debug) {
+            console.log(...msg);
+        }
     }
 
     private _getJSONObjFromString(jsonString: string) {

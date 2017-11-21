@@ -13,7 +13,8 @@ class UDPServiceDiscovery extends events_1.EventEmitter {
             port: 12345,
             address: null,
             announceInterval: 1000,
-            retryInterval: 999
+            retryInterval: 999,
+            debug: false
         };
         if (typeof opts !== 'undefined') {
             Object.assign(this._opts, opts);
@@ -197,7 +198,9 @@ class UDPServiceDiscovery extends events_1.EventEmitter {
         this._socket.close();
     }
     _log(...msg) {
-        console.log(...msg);
+        if (this._opts.debug) {
+            console.log(...msg);
+        }
     }
     _getJSONObjFromString(jsonString) {
         try {

@@ -5,6 +5,7 @@ export interface UDPServiceDiscoveryOptions {
     address?: string;
     announceInterval?: number;
     retryInterval?: number;
+    debug?: boolean;
 }
 export declare class UDPServiceDiscovery extends EventEmitter {
     readonly status: string;
