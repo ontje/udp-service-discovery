@@ -1,4 +1,5 @@
-var udpDSCV = require('./../index.js')({ port: 8000, debug: true });
+var UDPServiceDiscovery = require('../dist/udp-service-discovery.js').UDPServiceDiscovery
+var udpDSCV = new UDPServiceDiscovery({ port: 6000, debug: true });
 
 udpDSCV.listenOnce({name: "my-server", protocol: "ws"});
 

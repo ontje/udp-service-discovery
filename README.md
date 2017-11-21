@@ -8,7 +8,8 @@ If listenOnce(servicename) is used, the listening port will be unbound upon reci
 
 Server:
 
-    var udpDSCV = require('./../index.js')({port: 8000});
+	var UDPServiceDiscovery = require('../dist/udp-service-discovery.js').UDPServiceDiscovery
+    var udpDSCV = new UDPServiceDiscovery({port: 8000});
 
     // broadcasts name: 'my-server', ip: null (filled in by library), port: 4321, additional key/value {"protocol": "tcp"}
     udpDSCV.broadcast('my-server', null, 4321, {"protocol": "tcp", "other": 42});
@@ -17,7 +18,8 @@ Server:
 
 Client:
 
-    var udpDSCV = require('./../index.js')({port: 8000});
+	var UDPServiceDiscovery = require('../dist/udp-service-discovery.js').UDPServiceDiscovery
+    var udpDSCV = new UDPServiceDiscovery({port: 8000});
 
     udpDSCV.listenOnce('my-server');
 
