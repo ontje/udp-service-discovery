@@ -216,9 +216,6 @@ export class UDPServiceDiscovery extends EventEmitter {
         this._socket.on('listening', () => {
             this._socket.setBroadcast(true);
 
-            // this.socket.setMulticastLoopback(true);
-            // this.socket.addMembership(state.address, state.host);
-
             const address = this._socket.address();
 
             if (this.listenOnce) {
@@ -276,9 +273,7 @@ export class UDPServiceDiscovery extends EventEmitter {
 
     private _getBroadcastAddress(sender, ip, netmask) {
         sender._log(ip, netmask);
-
         const block = new Netmask(ip + '/' + netmask);
-
         return block.broadcast;
     }
 }
