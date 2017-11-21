@@ -1,7 +1,7 @@
 {
   "name": "udp-service-discovery",
   "description": "Simple and cheap service discovery broadcast and listener",
-  "version": "0.0.14",
+  "version": "1.0.0",
   "main": "dist/udp-service-discovery.js",
   "types": "dist/udp-service-discovery.d.ts",
   "dependencies": {
