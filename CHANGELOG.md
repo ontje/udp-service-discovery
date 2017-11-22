@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 ### Added
 - ability to limit broadcasts to a certain number of repetitions
 
-## [0.0.8] - 2017-22-02
+## [0.0.8] - 2017-02-22
 ### Changed
 - introduced ES6 arrow functions
 - cleaned up the code
